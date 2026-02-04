@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Typing Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+<style>
+body {
+    font-family: 'Comic Neue', cursive;
+    text-align: center;
+    margin: 0;
+    padding: 30px;
+    background: radial-gradient(circle at top left, #89f7fe, #66a6ff);
+    transition: background 5s ease-in-out;
+}
+
+body.auto-bg {
+    animation: bgChange 20s infinite alternate;
+}
+
+@keyframes bgChange {
+    0% { background: radial-gradient(circle at top left, #89f7fe, #66a6ff);}
+    25% { background: radial-gradient(circle at top right, #ff9a9e, #fad0c4);}
+    50% { background: radial-gradient(circle at bottom right, #a18cd1, #fbc2eb);}
+    75% { background: radial-gradient(circle at bottom left, #f6d365, #fda085);}
+    100% { background: radial-gradient(circle at top left, #89f7fe, #66a6ff);}
+}
+
+h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 2px 2px 10px #000;
+}
+
+#sentence {
+    font-size: 1.5rem;
+    margin: 20px auto;
+    width: 80%;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffd700, #ff6347);
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    min-height: 70px;
+    color: #2d3436;
+    font-weight: bold;
+    transition: transform 0.3s;
+}
+
+#sentence:hover {
+    transform: scale(1.02);
+}
+
+#userInput {
+    width: 80%;
+    padding: 15px;
+    font-size: 1.3rem;
+    border-radius: 15px;
+    margin-top: 20px;
+    border: 2px solid #00d2ff;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+#userInput:focus {
+    border-color: #ff6b6b;
+    box-shadow: 0 0 12px #ff6b6b;
+}
+
+#submitBtn {
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    margin-top: 20px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+#submitBtn:hover {
+    transform: scale(1.1) rotate(-1deg);
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+#timer {
+    font-size: 1.5rem;
+    margin-top: 15px;
+    color: #fff;
+    text-shadow: 0 0 5px #000;
+}
+
+#result {
+    font-size: 1.5rem;
+    margin-top: 20px;
+    color: #00ff6a;
+    text-shadow: 0 0 5px #000;
+}
+
+.back-btn {
+    display: block;
+    margin: 30px auto 0 auto;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    background: #ff0040;
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.back-btn:hover {
+    transform: scale(1.05) rotate(1deg);
+    background: #ff6b81;
+}
+</style>
+</head>
+<body class="auto-bg">
+
+<h1>⌨️ Speed Typing Master</h1>
+
+<div id="sentence">Loading sentence...</div>
+<input type="text" id="userInput" placeholder="Type here..." autocomplete="off"/>
+<br>
+<button id="submitBtn">Submit</button>
+
+<div id="timer">Time: 0 s</div>
+<div id="result"></div>
+
+<button class="back-btn" onclick="location.href='kids.html'">⬅ Back to Kids Zone</button>
+
+<script>
+const sentences = [
+    "The quick brown fox jumps over the lazy dog.",
+    "Practice makes a man perfect.",
+    "Typing fast improves your skills.",
+    "Never give up on your dreams.",
+    "Learning never exhausts the mind."
+];
+
+let startTime = null, timerInterval = null, currentSentence;
+
+function loadSentence() {
+    let randIndex = Math.floor(Math.random() * sentences.length);
+    currentSentence = sentences[randIndex];
+    document.getElementById("sentence").innerText = currentSentence;
+    document.getElementById("userInput").value = "";
+    document.getElementById("result").innerText = "";
+    document.getElementById("timer").innerText = "Time: 0 s";
+
+    clearInterval(timerInterval);
+    startTime = null;
+}
+
+document.getElementById("userInput").addEventListener("input", function() {
+    if (!startTime) {
+        startTime = new Date();
+        timerInterval = setInterval(() => {
+            let elapsed = ((new Date()) - startTime) / 1000;
+            document.getElementById("timer").innerText = `Time: ${elapsed.toFixed(1)} s`;
+        }, 100);
+    }
+});
+
+function calculateResult() {
+    let typed = document.getElementById("userInput").value.trim();
+    if (!startTime) return;
+
+    clearInterval(timerInterval);
+    let endTime = new Date();
+    let totalTimeSec = (endTime - startTime) / 1000;
+    let wordsTyped = typed.split(" ").filter(w => w !== "").length;
+    let wpm = (wordsTyped / totalTimeSec) * 60;
+
+    let correctChars = 0;
+    for (let i = 0; i < Math.min(typed.length, currentSentence.length); i++) {
+        if (typed[i] === currentSentence[i]) correctChars++;
+    }
+    let accuracy = (correctChars / currentSentence.length) * 100;
+
+    document.getElementById("result").innerHTML = `
+        ✅ Completed in <b>${totalTimeSec.toFixed(2)} s</b><br>
+        ✍️ Typing Speed: <b>${wpm.toFixed(2)} WPM</b><br>
+        🎯 Accuracy: <b>${accuracy.toFixed(2)}%</b>
+    `;
+
+    setTimeout(loadSentence, 4000);
+}
+
+document.getElementById("submitBtn").addEventListener("click", calculateResult);
+document.getElementById("userInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        calculateResult();
+    }
+});
+
+window.onload = loadSentence;
+</script>
+
+</body>
+</html>

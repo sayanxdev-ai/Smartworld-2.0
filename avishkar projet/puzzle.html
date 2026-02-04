@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Puzzle Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+body {
+    font-family: 'Roboto Slab', serif;
+    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    transition: background 0.5s;
+    animation: bgAnimation 20s infinite alternate;
+}
+
+@keyframes bgAnimation {
+    0% { background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%); }
+    50% { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+    100% { background: linear-gradient(135deg, #fbc2eb 0%, #fad0c4 100%); }
+}
+
+h1 {
+    color: #fff;
+    text-shadow: 2px 2px 8px #000;
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+button {
+    padding: 12px 25px;
+    margin: 10px 5px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s all;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+button:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+
+.sizeBtn { background: #ff6b81; color: white; width: 180px; }
+.actionBtn { background: #1dd1a1; color: white; margin: 10px; min-width: 120px; }
+
+#sizeSelection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+#puzzleSection {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+}
+
+#puzzleContainer {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+#puzzleBoard {
+    display: grid;
+    border: 4px solid #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    background: #eee;
+    transition: all 0.3s;
+}
+
+.piece {
+    border: 1px solid #fff;
+    background-size: cover;
+    cursor: grab;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+}
+
+.piece.dragging {
+    opacity: 0.6;
+    transform: scale(1.05);
+}
+
+#reference {
+    width: 180px;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+}
+
+#actionButtons {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    gap: 15px;
+}
+
+#winMessage {
+    font-size: 1.6rem;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 8px #000;
+    min-height: 40px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<h1>🧩 Image Puzzle Game</h1>
+
+<!-- Puzzle Size Selection -->
+<div id="sizeSelection">
+    <button class="sizeBtn" onclick="startPuzzle(3)">3x3 Puzzle</button>
+    <button class="sizeBtn" onclick="startPuzzle(6)">6x6 Puzzle</button>
+    <button class="sizeBtn" onclick="startPuzzle(10)">10x10 Puzzle</button>
+    <button class="sizeBtn" onclick="backToMenu()" style="background:#ff4757;">⬅ Back to Kids Zone</button>
+</div>
+
+<!-- Puzzle Section -->
+<div id="puzzleSection">
+    <div id="puzzleContainer">
+        <div>
+            <div id="puzzleBoard"></div>
+            <div id="actionButtons">
+                <button class="actionBtn" onclick="shufflePuzzle()">Shuffle</button>
+                <button class="actionBtn" onclick="checkUserPuzzle()">Check</button>
+                <button class="actionBtn" onclick="backToSize()">Back</button>
+            </div>
+            <div id="winMessage"></div>
+        </div>
+        <div>
+            <h3 style="text-align:center;color:#fff;text-shadow:1px 1px 5px #000;">Reference</h3>
+            <img id="reference" src="" alt="Reference Image">
+        </div>
+    </div>
+</div>
+
+<script>
+let gridSize = 3;
+let pieces = [];
+let dragSrc = null;
+let puzzleImg = "https://picsum.photos/400/400";
+
+const puzzleBoard = document.getElementById("puzzleBoard");
+const puzzleSection = document.getElementById("puzzleSection");
+const sizeSelection = document.getElementById("sizeSelection");
+const referenceImg = document.getElementById("reference");
+const winMessage = document.getElementById("winMessage");
+
+function startPuzzle(size){
+    gridSize = size;
+    sizeSelection.style.display = "none";
+    puzzleSection.style.display = "flex";
+
+    puzzleBoard.innerHTML = "";
+    pieces = [];
+
+    const boardSize = 400;
+    puzzleBoard.style.width = boardSize + "px";
+    puzzleBoard.style.height = boardSize + "px";
+    puzzleBoard.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+    puzzleBoard.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+
+    const pieceSize = boardSize / gridSize;
+
+    for(let i=0;i<gridSize*gridSize;i++){
+        const piece = document.createElement("div");
+        piece.classList.add("piece");
+        piece.style.width = pieceSize + "px";
+        piece.style.height = pieceSize + "px";
+        const row = Math.floor(i/gridSize);
+        const col = i%gridSize;
+        piece.style.backgroundImage = `url('${puzzleImg}')`;
+        piece.style.backgroundPosition = `-${col*pieceSize}px -${row*pieceSize}px`;
+        piece.style.backgroundSize = boardSize + "px " + boardSize + "px";
+        piece.setAttribute("draggable", true);
+
+        piece.addEventListener("dragstart", dragStart);
+        piece.addEventListener("dragover", dragOver);
+        piece.addEventListener("drop", dropPiece);
+        piece.addEventListener("dragend", dragEnd);
+
+        pieces.push(piece);
+        puzzleBoard.appendChild(piece);
+    }
+
+    referenceImg.src = puzzleImg;
+    winMessage.innerText = "";
+}
+
+// Drag & Drop
+function dragStart(e){ dragSrc = this; this.classList.add("dragging"); }
+function dragOver(e){ e.preventDefault(); }
+function dropPiece(e){
+    e.preventDefault();
+    if(dragSrc === this) return;
+
+    let srcIndex = Array.from(puzzleBoard.children).indexOf(dragSrc);
+    let targetIndex = Array.from(puzzleBoard.children).indexOf(this);
+
+    puzzleBoard.insertBefore(dragSrc, this);
+    if(srcIndex < targetIndex) puzzleBoard.insertBefore(this, dragSrc);
+    else puzzleBoard.insertBefore(this, dragSrc);
+}
+function dragEnd(e){ this.classList.remove("dragging"); }
+
+// Shuffle
+function shufflePuzzle(){
+    pieces.sort(() => Math.random() - 0.5);
+    pieces.forEach(p => puzzleBoard.appendChild(p));
+    winMessage.innerText = "";
+}
+
+// Check (always complete)
+function checkUserPuzzle(){
+    winMessage.innerText = "🎉 Puzzle Completed!";
+    winMessage.style.color = "#00ff00";
+}
+
+// Back to size selection
+function backToSize(){
+    puzzleSection.style.display = "none";
+    sizeSelection.style.display = "flex";
+}
+
+// Back to Kids Zone
+function backToMenu(){
+    window.location.href = "kids.html"; // replace with your Kids Zone page URL
+}
+</script>
+</body>
+</html>

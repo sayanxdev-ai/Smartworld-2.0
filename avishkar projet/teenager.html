@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Voice Recognition</title>
+<style>
+body { background: #000; color: #0ff; font-family: Arial; text-align: center; padding-top: 40px; }
+h1 { font-size: 38px; text-shadow: 0 0 15px cyan; }
+.jarvis-core {
+    width: 180px; height: 180px; margin: 40px auto; border-radius: 50%;
+    background: radial-gradient(circle, #00eaff, #005577);
+    box-shadow: 0 0 35px #00eaff, 0 0 60px cyan, 0 0 100px #00eaff;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.08);} 100%{transform:scale(1);} }
+button {
+    background: cyan; color: black; padding: 14px 35px; border: none; font-size: 22px;
+    border-radius: 8px; cursor: pointer; margin-top: 20px; box-shadow: 0 0 15px cyan; transition: 0.2s;
+}
+button:hover { transform: scale(1.1); }
+#output {
+    margin-top: 25px; color: #0ff; font-size: 20px; padding: 20px;
+    border: 1px solid cyan; width: 80%; margin-left:auto;margin-right:auto;
+    border-radius:10px; box-shadow:0 0 10px cyan; min-height:120px; text-align:left;
+}
+#backBtn { margin-top:12px; background:#ff0055; color:white; box-shadow:0 0 15px #ff0055; }
+#startBtn { margin-top:20px; background: #00ff88; color: black; }
+</style>
+</head>
+<body>
+
+<h1>Voice Recognition</h1>
+<div class="jarvis-core"></div>
+
+<button id="startBtn">🚀 Start Jarvis</button><br>
+<button id="talkBtn">🎤 Talk</button><br>
+<button id="backBtn">⬅ Back</button>
+
+<div id="output">Jarvis is ready...</div>
+
+<script>
+let output = document.getElementById("output");
+let firstGreetingDone = false;
+let exitMessageDone = false;
+
+// ---- Voice Setup ----
+let voices = [];
+let currentVoice = null;
+
+function populateVoices() {
+    voices = speechSynthesis.getVoices();
+    currentVoice = voices[0] || null;
+    console.log("Available Voices:", voices.map(v => v.name));
+}
+populateVoices();
+if(speechSynthesis.onvoiceschanged!==undefined){
+    speechSynthesis.onvoiceschanged=populateVoices;
+}
+
+function speak(text, callback=null){
+    if(!currentVoice) return;
+    let msg = new SpeechSynthesisUtterance(text);
+    msg.voice = currentVoice;
+    msg.rate=1; msg.pitch=1; msg.volume=1;
+    if(callback) msg.onend = callback;
+    speechSynthesis.speak(msg);
+}
+
+// ---- Speech Recognition ----
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.continuous=false;
+recognition.lang="en-US";
+
+// ---- Start Jarvis Button ----
+document.getElementById("startBtn").onclick = () => {
+    document.getElementById("startBtn").style.display="none";
+    startGreeting();
+};
+
+// ---- Greeting ----
+function startGreeting(){
+    speak("Hello sir, how are you?", ()=>{ recognition.start(); });
+}
+
+// ---- Recognition ----
+recognition.onresult=function(event){
+    let command = event.results[0][0].transcript.toLowerCase();
+    output.innerHTML="You said: "+command;
+    if(!firstGreetingDone){
+        if(command.includes("good") || command.includes("fine") || command.includes("well")){
+            speak("I am fabulous sir, how can I help you?", ()=>{ firstGreetingDone=true; });
+        } else {
+            speak("Okay sir, how can I help you?", ()=>{ firstGreetingDone=true; });
+        }
+    } else {
+        if(command.includes("change voice") || command.includes("voice")){ changeVoice(command); return; }
+        processCommand(command);
+    }
+};
+
+// ---- Talk Button ----
+document.getElementById("talkBtn").onclick=()=>{
+    recognition.start();
+    speak("Listening sir...");
+};
+
+// ---- Back Button ----
+document.getElementById("backBtn").onclick=()=>{
+    if(!exitMessageDone){
+        speak("Thanks for using sir, have a nice day", ()=>{
+            exitMessageDone=true;
+            window.location.href='index.html';
+        });
+    }
+};
+
+// ---- Stop Jarvis ----
+function stopJarvis(){ recognition.stop(); }
+
+// ---- Commands ----
+function processCommand(cmd){
+    cmd = cmd.toLowerCase();
+
+    // ---- Apology ----
+    if(cmd.includes("sorry") || cmd.includes("apologize")){
+        speak("It's okay sir, no worries. You're welcome!");
+        output.innerHTML += "<br>Response: It's okay, no worries. You're welcome!";
+        return;
+    }
+
+    // ---- Shut up ----
+    if(cmd.includes("shut up")){
+        speak("Sorry sir!");
+        output.innerHTML += "<br>Response: Sorry sir!";
+        return;
+    }
+
+    // ---- Time & Date ----
+    if(cmd.includes("time")){
+        let t = new Date().toLocaleTimeString();
+        speak("Sir, the time is " + t);
+        output.innerHTML+="<br>Time: "+t;
+        return;
+    }
+    if(cmd.includes("date")){
+        let d = new Date().toDateString();
+        speak("Sir, today's date is " + d);
+        output.innerHTML+="<br>Date: "+d;
+        return;
+    }
+
+    // ---- Weather & Climate ----
+    if(cmd.includes("weather") || cmd.includes("climate")){
+        let city = cmd.replace("weather in","").replace("climate in","").trim() || "Mumbai";
+        getWeather(city);
+        return;
+    }
+
+    // ---- Temperature ----
+    if(cmd.includes("temperature") || cmd.includes("temp")){
+        let query = cmd.replace("temperature","").replace("temp","").trim() || "temperature";
+        speak("Let me check the temperature sir, one second");
+        getWikiAnswer(query);
+        return;
+    }
+
+    // ---- Music ----
+    if(cmd.includes("play music") || cmd.includes("play")){
+        let song = cmd.replace("play","").trim();
+        playMusic(song);
+        return;
+    }
+
+    // ---- Open Websites ----
+    if(cmd.includes("open") && !cmd.includes("url")){
+        let site = cmd.replace("open","").trim();
+        let url = "https://"+site+".com";
+        speak("Opening "+site+" for you sir");
+        let a = document.createElement("a"); a.href=url; a.target="_blank";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        return;
+    }
+    if(cmd.includes("open url")){
+        let url = cmd.replace("open url","").trim();
+        speak("Opening the URL sir");
+        let a = document.createElement("a"); a.href=url; a.target="_blank";
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        return;
+    }
+
+    // ---- Search & Wikipedia ----
+    if(cmd.includes("search")){
+        let q = cmd.replace("search","").trim();
+        speak("Searching "+q+" sir, one second");
+        output.innerHTML += "<br>Searching Google for: " + q;
+        getWikiAnswer(q);
+        return;
+    }
+    if(cmd.includes("define")||cmd.includes("what is")||cmd.includes("who is")){
+        let q = cmd.replace("define","").replace("what is","").replace("who is","").trim();
+        speak("Let me check sir"); getWikiAnswer(q);
+        return;
+    }
+
+    // ---- Jokes ----
+    if(cmd.includes("joke")||cmd.includes("make me laugh")||cmd.includes("tell me a joke")){
+        tellJoke();
+        return;
+    }
+
+    // ---- Recipes ----
+    if(cmd.includes("recipe")||cmd.includes("banao")){
+        recipe(cmd);
+        return;
+    }
+
+    // ---- Unknown ----
+    speak("Sorry sir, I am still learning that command.");
+    output.innerHTML+="<br>Unknown command";
+}
+
+// ---- Wikipedia ----
+function getWikiAnswer(q){
+    fetch("https://en.wikipedia.org/api/rest_v1/page/summary/"+q)
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.extract){ speak("Sir, the answer is: "+data.extract); output.innerHTML+="<br>"+data.extract; }
+        else { speak("Sorry sir, I could not find that."); output.innerHTML+="<br>Not found."; }
+    });
+}
+
+// ---- Weather API ----
+function getWeather(city){
+    const apiKey = "YOUR_OPENWEATHERMAP_API_KEY"; // Replace with your OpenWeatherMap API Key
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`)
+    .then(res=>res.json())
+    .then(data=>{
+        if(data.main){
+            let temp = data.main.temp;
+            let desc = data.weather[0].description;
+            speak(`Sir, the temperature in ${city} is ${temp} degree Celsius and the climate is ${desc}`);
+            output.innerHTML += `<br>Weather in ${city}: ${temp}°C, ${desc}`;
+        } else {
+            speak("Sorry sir, I couldn't find the weather for that city.");
+            output.innerHTML += "<br>Weather not found.";
+        }
+    })
+    .catch(err=>{
+        speak("Sorry sir, I couldn't get the weather data.");
+        output.innerHTML += "<br>Error fetching weather.";
+    });
+}
+
+// ---- Jokes ----
+function tellJoke(){
+    let jokes=[
+        "Why don’t programmers like nature? It has too many bugs.",
+        "Why did the computer get cold? Because it forgot to close windows.",
+        "Why was the JavaScript developer sad? Because he didn't know how to express himself.",
+        "Why did the computer sneeze? It had a virus.",
+        "Why do robots have summer holidays? To recharge their batteries.",
+        "Why did the AI go to school? To improve its neural network!"
+    ];
+    let j=jokes[Math.floor(Math.random()*jokes.length)];
+    speak(j); output.innerHTML+="<br>Joke: "+j;
+}
+
+// ---- Recipes ----
+function recipe(cmd){
+    const recipes={
+        "shahi paneer":"Heat ghee, sauté onions, ginger-garlic paste, add tomato puree & spices, add cream & paneer, simmer, garnish & serve.",
+        "butter chicken":"Marinate chicken, cook in butter, add tomato gravy & cream, simmer, garnish & serve with rice/naan.",
+        "paneer tikka":"Marinate paneer, skewer with veggies, grill/bake 15-20 min, brush with butter, serve with chutney.",
+        "chole":"Soak & boil chickpeas, sauté onion, tomato & spices, mix chickpeas, simmer, garnish & serve with rice/bhatura.",
+        "dal makhani":"Soak lentils, cook with butter, cream, tomato puree & spices 20 min, garnish & serve.",
+        "palak paneer":"Blanch spinach, grind, sauté onion & spices, add spinach & paneer, simmer, garnish & serve."
+    };
+    let found=false;
+    for(let key in recipes){ if(cmd.includes(key)){ speak(recipes[key]); output.innerHTML+="<br>Recipe: "+recipes[key]; found=true; break; } }
+    if(!found){ speak("Sorry sir, I don't know this recipe yet."); output.innerHTML+="<br>Recipe not found."; }
+}
+
+// ---- Voice Change ----
+function changeVoice(cmd){
+    cmd=cmd.toLowerCase();
+    let target=null;
+    voices.forEach(v=>{ if(cmd.includes(v.name.toLowerCase()) || cmd.includes(v.lang.toLowerCase())) target=v; });
+    if(!target && cmd.includes("girl")) target=voices.find(v=>v.name.toLowerCase().includes("zira"));
+    if(!target && cmd.includes("man")) target=voices.find(v=>v.name.toLowerCase().includes("david"));
+    if(!target && cmd.includes("child")) target=voices.find(v=>v.name.toLowerCase().includes("hazel"));
+    if(!target) target=voices[0];
+    currentVoice=target;
+    speak("Voice changed to "+(currentVoice.name||"default"));
+    output.innerHTML+="<br>Voice changed to: "+currentVoice.name;
+}
+
+// ---- Continuous Listening ----
+recognition.onend = () => { recognition.start(); };
+
+// ---- Music ----
+function playMusic(song){
+    let url = song ? `https://www.youtube.com/results?search_query=${encodeURIComponent(song)}` : "https://music.youtube.com/";
+    speak("Playing " + (song || "music") + " sir");
+    window.open(url,"_blank");
+}
+</script>
+
+</body>
+</html>
